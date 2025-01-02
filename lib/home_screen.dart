@@ -5,7 +5,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_demo/data/repository.dart';
 import 'package:flutter_demo/data/speech_model.dart';
+import 'package:flutter_demo/speech_recognition_controller.dart';
 import 'package:logger/logger.dart';
+import 'package:markdown_editor_plus/markdown_editor_plus.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -15,15 +17,6 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  final methodChannel = MethodChannel('speech_recognition');
-  final eventChannel =
-      EventChannel('speech_recognition_stream').receiveBroadcastStream();
-  final speechChannel =
-      EventChannel('speech_listener').receiveBroadcastStream();
-
-  final textToSpeechChannel =
-      EventChannel('text_to_speech').receiveBroadcastStream();
-
   final streamController = StreamController<String>.broadcast();
   Stream<String> get stream => streamController.stream;
   final textController = TextEditingController();
@@ -50,19 +43,14 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  void handleTextToSpeech() async =>
-      await methodChannel.invokeMethod('textToSpeechHandler', message);
-
-  void handleSpeechRecognition() async =>
-      await methodChannel.invokeMethod('speechHandler');
-
-  Stream<String> streamSpeechRecognition() => eventChannel.map((event) {
+  Stream<String> streamSpeechRecognition() =>
+      SpeechRecognitionController.eventChannel.map((event) {
         getSpeech(event.toString());
         return event.toString();
       });
 
   Stream<bool> streamSpeechRecognitionState() {
-    return speechChannel.map((event) {
+    return SpeechRecognitionController.speechChannel.map((event) {
       setState(() {
         isListening = event;
       });
@@ -71,9 +59,10 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Stream<bool> streamTextToSpeechState() {
-    return textToSpeechChannel.map((event) {
+    return SpeechRecognitionController.textToSpeechChannel.map((event) {
       setState(() {
         isSpeaking = event;
+        Logger().d(event);
       });
       return event;
     });
@@ -84,7 +73,7 @@ class _HomeScreenState extends State<HomeScreen> {
     stream.listen((data) {
       Logger().d(data);
     }).onData((data) {
-      handleTextToSpeech();
+      SpeechRecognitionController.handleTextToSpeech(message);
     });
 
     super.initState();
@@ -116,7 +105,9 @@ class _HomeScreenState extends State<HomeScreen> {
                             color: Colors.black,
                             fontWeight: FontWeight.w600),
                       ),
-                      const SizedBox(height: 40),
+                      const SizedBox(height: 20),
+                      Divider(),
+                      const SizedBox(height: 20),
                       StreamBuilder(
                         stream: streamSpeechRecognition(),
                         builder: (context, snapshot) {
@@ -124,8 +115,9 @@ class _HomeScreenState extends State<HomeScreen> {
                             return Center(
                               child: Text(
                                 snapshot.data!,
+                                textAlign: TextAlign.center,
                                 style: TextStyle(
-                                    fontSize: 25, fontWeight: FontWeight.w800),
+                                    fontSize: 16, fontWeight: FontWeight.w800),
                               ),
                             );
                           } else {
@@ -141,45 +133,31 @@ class _HomeScreenState extends State<HomeScreen> {
                           }
                         },
                       ),
-                      const SizedBox(height: 100),
-                      isSpeaking
-                          ? IconButton(
-                              iconSize: 50,
-                              onPressed: () {},
+                      const SizedBox(height: 70),
+                      AvatarGlow(
+                        glowRadiusFactor: 0.3,
+                        glowColor: Colors.red,
+                        child: CircleAvatar(
+                          radius: 40,
+                          child: IconButton(
+                              padding: EdgeInsets.all(16),
+                              iconSize: 30,
+                              onPressed: () => SpeechRecognitionController
+                                  .handleSpeechRecognition(),
                               icon: StreamBuilder(
-                                  stream: streamTextToSpeechState(),
+                                  stream: streamSpeechRecognitionState(),
                                   builder: (context, snapshot) {
                                     if (snapshot.hasData) {
                                       return snapshot.data!
-                                          ? Icon(Icons.stop)
-                                          : Icon(Icons.play_arrow);
+                                          ? Icon(Icons.mic_off)
+                                          : Icon(Icons.mic);
                                     } else {
-                                      return const Icon(Icons.stop);
+                                      return const Icon(Icons.mic);
                                     }
-                                  }))
-                          : AvatarGlow(
-                              glowRadiusFactor: 0.3,
-                              glowColor: Colors.red,
-                              child: CircleAvatar(
-                                radius: 60,
-                                child: IconButton(
-                                    padding: EdgeInsets.all(30),
-                                    iconSize: 50,
-                                    onPressed: () => handleSpeechRecognition(),
-                                    icon: StreamBuilder(
-                                        stream: streamSpeechRecognitionState(),
-                                        builder: (context, snapshot) {
-                                          if (snapshot.hasData) {
-                                            return snapshot.data!
-                                                ? Icon(Icons.mic_off)
-                                                : Icon(Icons.mic);
-                                          } else {
-                                            return const Icon(Icons.mic);
-                                          }
-                                        })),
-                              ),
-                            ),
-                      const SizedBox(height: 100),
+                                  })),
+                        ),
+                      ),
+                      const SizedBox(height: 50),
                       Center(
                           child: isLoading
                               ? CircularProgressIndicator()

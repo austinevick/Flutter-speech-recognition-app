@@ -39,6 +39,7 @@ dependencies:
   logger: ^2.5.0
   flutter_riverpod: ^2.6.1
   markdown_editor_plus: ^0.2.15
+  porcupine_flutter: ^3.0.4
 
 dev_dependencies:
   flutter_test:
