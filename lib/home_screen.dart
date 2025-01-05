@@ -3,11 +3,10 @@ import 'dart:async';
 import 'package:avatar_glow/avatar_glow.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_demo/data/repository.dart';
-import 'package:flutter_demo/data/speech_model.dart';
+import 'package:flutter_demo/apikey.dart';
 import 'package:flutter_demo/speech_recognition_controller.dart';
+import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:logger/logger.dart';
-import 'package:markdown_editor_plus/markdown_editor_plus.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -29,13 +28,25 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> getSpeech(String prompt) async {
     try {
       setState(() => isLoading = true);
-      final model = SpeechModel(prompt: prompt);
-      final response = await Repository.getSpeech(model);
+      final model = GenerativeModel(
+        model: 'gemini-2.0-flash-exp',
+        apiKey: APIKEY,
+        generationConfig: GenerationConfig(
+          temperature: 1,
+          topK: 40,
+          topP: 0.95,
+          maxOutputTokens: 8192,
+          responseMimeType: 'text/plain',
+        ),
+      );
+
+      final response = await model.generateContent([Content.text(prompt)]);
+
       setState(() {
-        message = response.message;
+        message = response.text!;
         isLoading = false;
       });
-      streamController.add(response.message);
+      streamController.add(response.text!);
     } catch (e) {
       setState(() => isLoading = false);
       print(e);

@@ -6,7 +6,6 @@ import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 import android.speech.tts.TextToSpeech
-import android.speech.tts.Voice
 import android.util.Log
 import androidx.core.app.ActivityCompat
 import io.flutter.embedding.android.FlutterActivity
@@ -16,18 +15,19 @@ import io.flutter.plugin.common.MethodChannel
 import java.util.Locale
 
 class MainActivity : FlutterActivity(), RecognitionListener {
-    private var events: EventChannel.EventSink? = null
-    private var speechRecognizerEvents: EventChannel.EventSink? = null
     private var speechToTextEvents: EventChannel.EventSink? = null
+    private var speechRecognizerEvents: EventChannel.EventSink? = null
+    private var textToSpeechEvents: EventChannel.EventSink? = null
 
     private var speechRecognizer: SpeechRecognizer? = null
     private var textToSpeech: TextToSpeech? = null
-    private val METHODCHANNEL = "speech_recognition"
-    private val EVENTCHANNEL = "speech_recognition_stream"
-    private val SPEECHLISTENER = "speech_listener"
-    private val TEXTTOSPEECH = "text_to_speech"
     private lateinit var intent: Intent
     private var isListening = false
+
+    private val SPEECHRECOGNITIONCHANNEL = "speech_recognition"
+    private val SPEECHTOTEXTEVENTCHANNEL = "speech_to_text_event_channel"
+    private val SPEECHRECOGNIZERCHANNEL = "speech_recognizer_channel"
+    private val TEXTTOSPEECHCHANNEL = "text_to_speech_channel"
 
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
@@ -61,19 +61,19 @@ class MainActivity : FlutterActivity(), RecognitionListener {
         )
 
 
-        EventChannel(flutterEngine.dartExecutor.binaryMessenger, TEXTTOSPEECH).setStreamHandler(
+        EventChannel(flutterEngine.dartExecutor.binaryMessenger, TEXTTOSPEECHCHANNEL).setStreamHandler(
             object : EventChannel.StreamHandler {
                 override fun onListen(arguments: Any?, events: EventChannel.EventSink?) {
-                    this@MainActivity.speechToTextEvents = events
+                    this@MainActivity.textToSpeechEvents = events
                 }
 
                 override fun onCancel(arguments: Any?) {
-                    this@MainActivity.speechToTextEvents = null
+                    this@MainActivity.textToSpeechEvents = null
                 }
             }
         )
 
-        EventChannel(flutterEngine.dartExecutor.binaryMessenger, SPEECHLISTENER).setStreamHandler(
+        EventChannel(flutterEngine.dartExecutor.binaryMessenger, SPEECHRECOGNIZERCHANNEL).setStreamHandler(
             object : EventChannel.StreamHandler {
                 override fun onListen(arguments: Any?, events: EventChannel.EventSink?) {
                     this@MainActivity.speechRecognizerEvents = events
@@ -85,19 +85,19 @@ class MainActivity : FlutterActivity(), RecognitionListener {
             }
         )
 
-        EventChannel(flutterEngine.dartExecutor.binaryMessenger, EVENTCHANNEL).setStreamHandler(
+        EventChannel(flutterEngine.dartExecutor.binaryMessenger, SPEECHTOTEXTEVENTCHANNEL).setStreamHandler(
             object : EventChannel.StreamHandler {
                 override fun onListen(arguments: Any?, events: EventChannel.EventSink?) {
-                    this@MainActivity.events = events
+                    this@MainActivity.speechToTextEvents = events
                 }
 
                 override fun onCancel(arguments: Any?) {
-                    this@MainActivity.events = null
+                    this@MainActivity.speechToTextEvents = null
                 }
             }
         )
 
-        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, METHODCHANNEL)
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, SPEECHRECOGNITIONCHANNEL)
             .setMethodCallHandler { call, result ->
                 if (call.method == "speechHandler") {
                     handleVoiceCommand()
@@ -112,7 +112,7 @@ class MainActivity : FlutterActivity(), RecognitionListener {
     private fun handleTextToSpeech(speechText: String) {
         if (textToSpeech?.isSpeaking == true) {
             textToSpeech?.stop()
-            speechToTextEvents?.success(false)
+            textToSpeechEvents?.success(false)
         } else {
             textToSpeech?.speak(
                 speechText,
@@ -120,7 +120,7 @@ class MainActivity : FlutterActivity(), RecognitionListener {
                 null,
                 null
             )
-            speechToTextEvents?.success(true)
+            textToSpeechEvents?.success(true)
         }
     }
 
@@ -167,7 +167,7 @@ class MainActivity : FlutterActivity(), RecognitionListener {
         val data = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
         if (data != null) {
             for (text in data) {
-                events?.success(text)
+                speechToTextEvents?.success(text)
                 Log.d("SpeechRecognition", text)
             }
         }
