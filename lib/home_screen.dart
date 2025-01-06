@@ -25,7 +25,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   String message = '';
 
-  Future<void> getSpeech(String prompt) async {
+  Future<void> getGenerativeResponse(String prompt) async {
     try {
       setState(() => isLoading = true);
       final model = GenerativeModel(
@@ -56,34 +56,28 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Stream<String> streamSpeechRecognition() =>
       SpeechRecognitionController.eventChannel.map((event) {
-        getSpeech(event.toString());
+        getGenerativeResponse(event.toString());
         return event.toString();
       });
 
   Stream<bool> streamSpeechRecognitionState() {
     return SpeechRecognitionController.speechChannel.map((event) {
-      setState(() {
-        isListening = event;
-      });
+      setState(() => isListening = event);
       return event;
     });
   }
 
   Stream<bool> streamTextToSpeechState() {
     return SpeechRecognitionController.textToSpeechChannel.map((event) {
-      setState(() {
-        isSpeaking = event;
-        Logger().d(event);
-      });
+      setState(() => isSpeaking = event);
+      Logger().d(event);
       return event;
     });
   }
 
   @override
   void initState() {
-    stream.listen((data) {
-      Logger().d(data);
-    }).onData((data) {
+    stream.listen((data) => Logger().d(data)).onData((data) {
       SpeechRecognitionController.handleTextToSpeech(message);
     });
 
@@ -200,7 +194,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       onPressed: () {
                         if (textController.text.isNotEmpty) {
                           HapticFeedback.vibrate();
-                          getSpeech(textController.text.trim());
+                          getGenerativeResponse(textController.text.trim());
                           setState(() => textController.text = '');
                         }
                       },
