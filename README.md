@@ -1,6 +1,7 @@
 # flutter speech recognition 
 
-A new Flutter project.
+## Screenshot
+<img src="https://github.com/austinevick/Flutter-speech-recognition-app/blob/main/screenshots/Screenshot_20250105-161820.jpg" width="400">
 
 ## Getting Started
 
